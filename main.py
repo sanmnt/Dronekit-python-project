@@ -1,7 +1,12 @@
 from __future__ import print_function
 import time
 from dronekit import connect, VehicleMode, LocationGlobalRelative
+from pointCollection import pointCollection
+from Data_Converter import port_init, getLiDAR_data
 
+currentVelocity = ()  # form of: (x,y,z,xyAngle,zAngle)
+dimension = 5
+start = 0
 
 # Set up option parsing to get connection string
 import argparse
@@ -101,14 +106,98 @@ def condition_yaw(heading, relative=False):
     # send command to vehicle
     vehicle.send_mavlink(msg)
 
+def begin():
+    sock = port_init()
+    print("are we fucked")
+    points = getLiDAR_data(sock)
+    print("we fucked")
+    print(len(points))
+    #    converter = pointCollection(30, points)
+    callMethods(sock)
+
+
+def callMethods(sock):
+    INTERRUPT = 'FALSE'
+    # count = 0
+    global start
+    start = time.time()
+
+    while INTERRUPT == 'FALSE':
+        print("call obstacle avoidance algorithm")
+        points = getLiDAR_data(sock)
+        temp = startAvoidance(points)
+        if temp is not None:
+            send_ned_velocity(temp[0].x * -1, temp[0].y * -1, [0].z * -1, .5)
+            start = time.time() - .5  # ensures .5 second delay before pathing alters the drone path again
+        time.sleep(0.1)
+
+        # When 1 sec or more has elapsed...
+        if time.time() - start > 1:
+            start = time.time()
+
+            # This will be called once per second
+            print("call pathing algorithm")
+            #       if(count >= 0):
+            points2 = []
+            i = 0
+            # for point in points:
+            #     i += 1
+            #     points2.append(point)
+            #
+            #     if i >= 1000:
+            #         break
+            #
+            # # with open('test.txt', 'wb') as file:
+            #     # pickle.dump(points2, file)
+            # converter.setNewPoints(points2)
+            # print(converter.findDirectionTo(300, 200))
+            # break
+
+        #  pointCollection.findDirectionTo(dx,dy)
+
+
+# call this method and it will call the others
+def startAvoidance(pointList):
+    global currentVelocity
+    currentVelocity = vehicle.velocity
+    specificSubset = avoidRectangular(currentVelocity.x, currentVelocity.y, currentVelocity.z, pointList)  # efficient method to shrink the list by limiting points to only those in range of velocity components
+    return avoidPolar(specificSubset)  # uses the smaller list, if not empty, to detect possible collision
+
+
+# inputs: x,y,z components of velocity and the list of points from the most recent lidar scan
+def avoidRectangular(x, y, z, pointList):
+    specificSubset = []
+    for p in pointList:
+        if (0 < x < p.x) or (0 > x > p.x):
+            if (0 < y < p.y) or (0 > y > p.y):
+                if (0 < z < p.z) or (0 > z > p.z):
+                    specificSubset.add(p)
+    return specificSubset
+
+    # find all points with x in a range between 0m and the x component of velocity, eliminate all others. repeat with y and z
+    # if the list of points is not empty, then check the angle of each point
+
+
+def avoidPolar(specificSubset):
+    collisionPoints = []
+    for p in specificSubset:
+        # calculate if the angles collide. if they do, stop or reverse movement
+        if currentVelocity.xyAngle - dimension < p.azimuth < currentVelocity.xyAngle + dimension:
+            if currentVelocity.zAngle - dimension < p.azimuth < currentVelocity.zAngle + dimension:
+                # following line to be replaced with an output: 0 if no change, or intended change in velocity if
+                # collision is detected
+                collisionPoints.append(p)
+    return collisionPoints
+    # actual behavior of the avoidance to be determined, though this is a simple solution that would work
+
 
 arm_and_takeoff(10)
 
 print("Set default/target airspeed to 3")
 vehicle.airspeed = 3
 
-#NOTE: PUT FOR LOOP AND CONNECT IT TO LIDAR SO THAT WE HAVE A FOR LOOP THAT IF FRONT AREA IS CLEAR MOVE FORWARD
-send_ned_velocity(1, 0, 0, 20)
+begin()
+
 # print("Going towards first point for 30 seconds ...")
 # point1 = LocationGlobalRelative(-35.361354, 149.165218, 20)
 # vehicle.simple_goto(point1)
