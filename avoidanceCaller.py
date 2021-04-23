@@ -2,7 +2,7 @@ import time
 from pointCollection import pointCollection
 from Data_Converter import port_init, getLiDAR_data
 import pickle
-from dronekit import connect, VehicleMode
+#from dronekit import connect, VehicleMode
 
 currentVelocity = ()  # form of: (x,y,z,xyAngle,zAngle)
 dimension = 5
@@ -14,7 +14,7 @@ def begin():
     points = getLiDAR_data(sock)
     print(len(points))
     converter = pointCollection(30, points)
-    callMethods()(sock, converter)
+    callMethods(sock, converter)
 
 
 def callMethods(sock, converter):
@@ -26,16 +26,15 @@ def callMethods(sock, converter):
     while INTERRUPT == 'FALSE':
         print("call obstacle avoidance algorithm")
         points = getLiDAR_data(sock)
-        temp = startAvoidance(points)
-        if temp is not None:
-            send_ned_velocity(temp[0].x * -1, temp[0].y * -1, [0].z * -1, .5)
-            start = time.time() - .5  # ensures .5 second delay before pathing alters the drone path again
+        # temp = startAvoidance(points)
+        # if temp is not None:
+        #     #send_ned_velocity(temp[0].x * -1, temp[0].y * -1, [0].z * -1, .5)
+        #     start = time.time() - .5  # ensures .5 second delay before pathing alters the drone path again
         time.sleep(0.1)
 
         # When 1 sec or more has elapsed...
         if time.time() - start > 1:
             start = time.time()
-
             # This will be called once per second
             print("call pathing algorithm")
             #       if(count >= 0):
@@ -43,16 +42,24 @@ def callMethods(sock, converter):
             i = 0
             for point in points:
                 i += 1
-                points2.append(point)
+                if point.getVertical()==1:
+                   points2.append(point)
 
-                if i >= 1000:
-                    break
+            with open('test.txt', 'wb') as file:
+                pickle.dump(points2,file)
+                file.close()
+            with open('test.txt', 'rb') as file:
+                temp = pickle.load(file)
+                file.close()
+                print(len(temp))
 
-            # with open('test.txt', 'wb') as file:
-                # pickle.dump(points2, file)
+
+
+            testTime = (time.time())
             converter.setNewPoints(points2)
-            print(converter.findDirectionTo(300, 200))
-            break
+
+            print(converter.findDirectionTo(0, 1000))
+            print(time.time()-testTime)
 
         #  pointCollection.findDirectionTo(dx,dy)
 
