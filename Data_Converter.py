@@ -1,12 +1,10 @@
 import math
 import socket
 
-
-
 #Point class Initializer ----------------------------------------------------
 class Point:
 
-    def __init__(self, distance, azimuth_angle, vertical_angle):
+    def __init__(self, distance, azimuth_angle, vertical_angle, *args):
         self.d = float(distance)
         self.alpha = float(azimuth_angle)
         self.omega = float(vertical_angle)
@@ -14,19 +12,23 @@ class Point:
         self.x = self.d*math.cos(math.radians(self.omega))*math.sin(math.radians(self.alpha))
         self.y = self.d*math.cos(math.radians(self.omega))*math.cos(math.radians(self.alpha))
         self.z = self.d*math.sin(math.radians(self.omega))
-        self.edgenum = -1
-
+        self.edgeNum = -1
+        self.angle = self.calcAngle()
+        if len(args) == 2:
+            self.x = float(args[0])
+            self.y = float(args[1])
+            self.angle = self.calcAngle()
 
     def setEdgeNum(self, EdgeNum):
-        self.edgenum = EdgeNum
+        self.edgeNum = EdgeNum
 
     def getEdgeNum(self):
-        return self.edgenum
+        return self.edgeNum
 
     def getDistance(self):
         return self.d
 
-    def getAngle(self):
+    def getAzimuth(self):
         return self.alpha
 
     def getVertical(self):
@@ -34,19 +36,43 @@ class Point:
 
     def getX(self):
         return self.x
-    def setY(self, newY):
-        self.y = newY
+
     def setX(self, newX):
         self.x = newX
+        self.angle = self.calcAngle()
+        return self.x
 
     def getY(self):
+        return self.y
+
+    def setY(self, newY):
+        self.y = newY
+        self.angle = self.calcAngle()
         return self.y
 
     def getZ(self):
         return self.z
 
-    def printSelf(self):
-        print("Distnance is " + str(self.d) + " mm, azimuth angle is " + str(self.alpha) + " deg, verical angle is " + str(self.omega) + " deg")
+    def getAngle(self):
+        return float(self.angle)
+
+    def calcAngle(self):
+        if(self.x>0.0 and self.y>=0.0):
+            return(math.degrees(math.atan(self.y/self.x)))
+        if(self.x>0.0 and self.y<0.0):
+            return(math.degrees(math.atan(self.y/self.x))+360)
+        if(self.x<0.0):
+            return(math.degrees(math.atan(self.y/self.x))+180)
+        if(self.x==0.0):
+            if(self.y<0.0):
+                return(270.0)
+            if(self.y>0.0):
+                return(90.0)
+            if(self.y == 0.0):
+                return(0.0)
+
+    def __str__(self):
+        return ("Distnance is " + str(self.d) + " mm, azimuth angle is " + str(self.alpha) + " deg, verical angle is " + str(self.omega) + " deg, X is: " + str(self.x) + ", Y is: " + str(self.y) + ", edge number is: " + str(self.edgeNum) + ", angle is: " + str(self.angle) + ".")
 
     #def cartCoord(self,d,alpha,omega):
     #self.x = self.d*math.cos(math.radians(self.omega))*math.sin(math.radians(self.alpha))
