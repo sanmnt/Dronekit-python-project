@@ -55,39 +55,29 @@ class Edge:
             if((360 - self.points[len(self.points) - 1].getAngle()) + zeroToFirst > maximum):
                 self.startPoint = self.points[0]
                 self.endPoint = self.points[len(self.points) - 1]
+                '''print("start poit:" + self.startPoint.__str__())
+                print("end poit:" + self.endPoint.__str__())
+                print("360 gap is the biggest")'''
             else:
                 self.startPoint = self.points[location]
                 self.endPoint = self.points[location + 1]
+                '''print("start poit:" + self.startPoint.__str__())
+                print("end poit:" + self.endPoint.__str__())
+                print("360 gap is NOT the biggest")'''
 
-    def findOutsidePoints(self, pointsToCheck):
-        minimums = [self.perpendicularDistance(pointsToCheck[0].getX(), pointsToCheck[0].getY(), self.points[0]),
-                    self.perpendicularDistance(pointsToCheck[1].getX(), pointsToCheck[1].getY(), self.points[0]),
-                    self.perpendicularDistance(pointsToCheck[2].getX(), pointsToCheck[2].getY(), self.points[0]),
-                    self.perpendicularDistance(pointsToCheck[3].getX(), pointsToCheck[3].getY(), self.points[0])]
-        result = []
-        maximum = 0;
-        maximumLocation1 = -1
-        maximumLocation2 = -1
+    def findOutsidePoint(self, pointsToCheck):
+        minimum1 = self.perpendicularDistance(pointsToCheck[0].getX(), pointsToCheck[0].getY(), self.points[0])
+        minimum2 = self.perpendicularDistance(pointsToCheck[1].getX(), pointsToCheck[1].getY(), self.points[0])
         for p in self.points:
-            for i in range(len(pointsToCheck)):
-                if self.perpendicularDistance(pointsToCheck[i].getX(), pointsToCheck[i].getY(), p) < minimums[i]:
-                    minimums[i] = self.perpendicularDistance(pointsToCheck[i].getX(), pointsToCheck[i].getY(), p)
-        for i in range(len(pointsToCheck)):
-            if minimums[i] > maximum:
-                maximum = minimums[i]
-                maximumLocation1 = i
-        maximum = 0
-        for i in range(len(pointsToCheck)):
-            if minimums[i] > maximum and i != maximumLocation1:
-                maximum = minimums[i]
-                maximumLocation2 = i
-        result.append(pointsToCheck[maximumLocation1])
-        result.append(pointsToCheck[maximumLocation2])
-        '''print("This is what \"findOutsidePoints\" we found:")
-        for i in range(len(result)):
-            result[i].printSelf()
-        print("end of  \"findOutsidePoints\" findings.")'''
-        return result
+            if self.perpendicularDistance(pointsToCheck[0].getX(), pointsToCheck[0].getY(), p) < minimum1:
+                minimum1 = self.perpendicularDistance(pointsToCheck[0].getX(), pointsToCheck[0].getY(), p)
+            if self.perpendicularDistance(pointsToCheck[1].getX(), pointsToCheck[1].getY(), p) < minimum2:
+                minimum2 = self.perpendicularDistance(pointsToCheck[1].getX(), pointsToCheck[1].getY(), p)
+        #print("\nminimums for points are:\n" + pointsToCheck[0].__str__() + '\n' + str(minimum1) + '\n' + pointsToCheck[1].__str__() + '\n' + str(minimum2))
+        if(minimum1 > minimum2):
+            return pointsToCheck[0]
+        else:
+            return pointsToCheck[1]
 
 
     def addEdge(self, otherEdge):
@@ -129,15 +119,18 @@ class Edge:
             if(y == 0.0):
                 return(0.0)
 
-    def printSelf(self):
+    def __str__(self):
+        result = ''
         for p in self.points:
-            p.printSelf()
-        print("Start Point: " )
-        self.startPoint.printSelf()
-        print("End Point: ")
-        self.endPoint.printSelf()
-        print("Origin: ")
-        self.ORIGIN.printSelf()
-        print("Edge Number: " + str(self.edgeNum))
+            result += p.__str__() + '\n'
+        result += '\n'
+        result += "\nStart Point:\n"
+        result += self.startPoint.__str__()
+        result += "\nEnd Point:\n"
+        result += self.endPoint.__str__()
+        result += "\nOrigin:\n"
+        result += self.ORIGIN.__str__()
+        result += "\nEdge Number: " + str(self.edgeNum)
+        return result
 
 
