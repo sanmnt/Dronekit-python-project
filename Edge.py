@@ -132,5 +132,3 @@ class Edge:
         result += self.ORIGIN.__str__()
         result += "\nEdge Number: " + str(self.edgeNum)
         return result
-
-
