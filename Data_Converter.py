@@ -126,11 +126,15 @@ def port_init():
 #This will create pointclass for a single data packet of 1200 byte length
 def getLiDAR_data(sock):
 
+    print("0")
     data, addr = sock.recvfrom(1248) # buffer size is 1248 bytes
+    print("1")
     length = len(data)
+    print("2")
     data_deci = list()
 
     for loopvar_data in data:
+        print("something")
         data_deci.append(ord(loopvar_data))
 
     loopvar0 = 0

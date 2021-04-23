@@ -112,11 +112,11 @@ def begin():
     points = getLiDAR_data(sock)
     print("we fucked")
     print(len(points))
-    #    converter = pointCollection(30, points)
-    callMethods(sock)
+    converter = pointCollection.py(30, points)
+    callMethods(sock, converter)
 
 
-def callMethods(sock):
+def callMethods(sock, converter):
     INTERRUPT = 'FALSE'
     # count = 0
     global start
@@ -125,33 +125,40 @@ def callMethods(sock):
     while INTERRUPT == 'FALSE':
         print("call obstacle avoidance algorithm")
         points = getLiDAR_data(sock)
-        temp = startAvoidance(points)
-        if temp is not None:
-            send_ned_velocity(temp[0].x * -1, temp[0].y * -1, [0].z * -1, .5)
-            start = time.time() - .5  # ensures .5 second delay before pathing alters the drone path again
+        # temp = startAvoidance(points)
+        # if temp is not None:
+        #     #send_ned_velocity(temp[0].x * -1, temp[0].y * -1, [0].z * -1, .5)
+        #     start = time.time() - .5  # ensures .5 second delay before pathing alters the drone path again
         time.sleep(0.1)
 
         # When 1 sec or more has elapsed...
         if time.time() - start > 1:
             start = time.time()
-
             # This will be called once per second
             print("call pathing algorithm")
             #       if(count >= 0):
             points2 = []
             i = 0
-            # for point in points:
-            #     i += 1
-            #     points2.append(point)
-            #
-            #     if i >= 1000:
-            #         break
-            #
-            # # with open('test.txt', 'wb') as file:
-            #     # pickle.dump(points2, file)
-            # converter.setNewPoints(points2)
-            # print(converter.findDirectionTo(300, 200))
-            # break
+            for point in points:
+                i += 1
+                if point.getVertical()==1:
+                    points2.append(point)
+
+            with open('test.txt', 'wb') as file:
+                pickle.dump(points2,file)
+                file.close()
+            with open('test.txt', 'rb') as file:
+                temp = pickle.load(file)
+                file.close()
+                print(len(temp))
+
+
+
+            testTime = (time.time())
+            converter.setNewPoints(points2)
+
+            print(converter.findDirectionTo(0, 1000))
+            print(time.time()-testTime)
 
         #  pointCollection.findDirectionTo(dx,dy)
 
@@ -171,7 +178,7 @@ def avoidRectangular(x, y, z, pointList):
         if (0 < x < p.x) or (0 > x > p.x):
             if (0 < y < p.y) or (0 > y > p.y):
                 if (0 < z < p.z) or (0 > z > p.z):
-                    specificSubset.add(p)
+                    specificSubset.append(p)
     return specificSubset
 
     # find all points with x in a range between 0m and the x component of velocity, eliminate all others. repeat with y and z

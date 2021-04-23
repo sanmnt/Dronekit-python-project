@@ -1,5 +1,5 @@
 import math
-import Data_Converter
+# import Point
 from Data_Converter import Point
 import Edge
 from Edge import Edge
@@ -9,7 +9,7 @@ class pointCollection:
     def __init__(self, margin, points):
         self.points = points
         self.edges = []
-        self.origin = Point(0,0,0,0, 0)
+        self.origin = Point(0, 0, -1)
         self.margin = margin
 
     def setNewPoints(self, newPoints):
@@ -17,30 +17,32 @@ class pointCollection:
 
     def findDirectionTo(self, dx, dy):
         closestPoints = []
-        pathPoints = []
-        self.edgeEnds = []
+        edgeEnds = []
+        avoidancePoints = []
         closestPointsToTangentPaths = []
         selectedWayPoint = None
-        self.edges = []
-        for i in range(len(self.points)-1,-1,-1):
-            if self.distancePP(self.points[i], self.origin) <= self.margin:
-                self.points.pop(i)
-        #print('0')
+        print("findedges")
         self.findEdges()
-        #print('1')
+        print("findendpointsall")
         self.findEndPointsAll()
-        #print('2')
+        print("findclosestto")
         closestPoints = self.findClosestTo(dx, dy)
-        #print('3')
         if len(closestPoints) == 0 and self.distanceCP(dx, dy, self.origin) <= self.margin:
             return self.origin
         elif len(closestPoints) == 0:
-            return Point(0,0,0,dx, dy)
-        #print('5')
+            return Point(dx, dy, -1)
         edgeToAvoid = closestPoints[0].getEdgeNum()
-        self.edgeEnds = [self.edges[edgeToAvoid].getStartPoint(), self.edges[edgeToAvoid].getEndPoint()]
-        pathPoints.append(self.edges[edgeToAvoid].findOutsidePoint(self.findAvoidancePoints(self.edges[edgeToAvoid].getStartPoint())))
-        pathPoints.append(self.edges[edgeToAvoid].findOutsidePoint(self.findAvoidancePoints(self.edges[edgeToAvoid].getEndPoint())))
+        print("getstartpoint")
+        edgeEnds.append(self.edges[edgeToAvoid].getStartPoint())
+        print("getendpoint")
+        edgeEnds.append(self.edges[edgeToAvoid].getEndPoint())
+        print("getavoidancepoints1")
+        avoidancePoints.extend(self.findAvoidancePoints(edgeEnds[0]))
+        print("getavoidancepoints2")
+        avoidancePoints.extend(self.findAvoidancePoints(edgeEnds[1]))
+        print("findoutsidepoints")
+        pathPoints = self.edges[edgeToAvoid].findOutsidePoints(avoidancePoints)
+        print("if")
         if(self.distanceCP(dx, dy, pathPoints[0]) < self.distanceCP(dx, dy, pathPoints[1])):
             selectedWayPoint = pathPoints[0]
         else:
@@ -49,7 +51,6 @@ class pointCollection:
         '''print(self.distancePP(closestPoint, self.origin))'''
 
         if self.distancePP(closestPoint, self.origin) <= self.margin * 1.5:
-            #print("close")
             AngularDiffrence = 0.0
             coefficient = 0.0
             result = 0.0
@@ -67,7 +68,7 @@ class pointCollection:
             if AngularDiffrence < -180:
                 result = ((selectedWayPoint.getAngle() - ((360 + AngularDiffrence) * coefficient)) + 360) % 360
 
-            return Point(0,0,0,math.cos(math.radians(result)) * length, math.sin(math.radians(result)) * length)
+            return Point(math.cos(math.radians(result)) * length, math.sin(math.radians(result)) * length, -1)
         else:
             return selectedWayPoint
 
@@ -75,13 +76,11 @@ class pointCollection:
     def findAvoidancePoints(self, aPoint):
         result = []
         gamma = (180 + aPoint.getAngle()) % 360
-        print("aPoint is:")
-        print(aPoint)
-        diviationAngle = math.degrees(math.acos((self.margin)/self.distancePP(self.origin, aPoint)))
+        diviationAngle = math.degrees(math.acos((self.margin *1.05)/self.distancePP(self.origin, aPoint)))
         angle1 = gamma + diviationAngle
         angle2 = gamma - diviationAngle
-        result.append(Point(0,0,0,aPoint.getX() + self.margin * 1.05 * math.cos(math.radians(angle1)), aPoint.getY() + self.margin * 1.05 * math.sin(math.radians(angle1))))
-        result.append(Point(0,0,0,aPoint.getX() + self.margin * 1.05 * math.cos(math.radians(angle2)), aPoint.getY() + self.margin * 1.05 * math.sin(math.radians(angle2))))
+        result.append(Point(aPoint.getX() + self.margin * math.cos(math.radians(angle1)), aPoint.getY() + self.margin * math.sin(math.radians(angle1)), -1))
+        result.append(Point(aPoint.getX() + self.margin * math.cos(math.radians(angle2)), aPoint.getY() + self.margin * math.sin(math.radians(angle2)), -1))
         return result
 
     def findEndPointsAll(self):
@@ -90,8 +89,8 @@ class pointCollection:
 
     def calculateTangents(self, point):
         result = []
-        result.append(Point(0,0,0,self.margin * math.cos(math.radians(((point.getAngle() + 90)%360 + 360) % 360)), self.margin * math.sin(math.radians(((point.getAngle() + 90)%360 + 360) % 360))))
-        result.append(Point(0,0,0,self.margin * math.cos(math.radians(((point.getAngle() - 90)%360 + 360) % 360)), self.margin * math.sin(math.radians(((point.getAngle() - 90)%360 + 360) % 360))))
+        result.append(Point(self.margin * math.cos(math.radians(((point.getAngle() + 90)%360 + 360) % 360)), self.margin * math.sin(math.radians(((point.getAngle() + 90)%360 + 360) % 360)), -1))
+        result.append(Point(self.margin * math.cos(math.radians(((point.getAngle() - 90)%360 + 360) % 360)), self.margin * math.sin(math.radians(((point.getAngle() - 90)%360 + 360) % 360)), -1))
         return result
 
     def findClosestTo(self, x, y):
@@ -140,46 +139,28 @@ class pointCollection:
 
     def findEdges(self):
         edgeNum = 0
-        pointsCopy = self.points[:]
-        print(len(self.points))
-        if(len(self.points)==0):
-            return
+        print(self.points)
         self.edges.append(Edge(self.points[0], 0, self.origin))
-        pointsCopy.pop(0)
-        pointsToAdd = self.findPointsAround(pointsCopy, self.points[0])
-        '''for p in pointsToAdd:
-            print(p)'''
-        while len(pointsCopy) > 0:
-            '''print("----------------------------------------------------------------------------")
-            for p in pointsCopy:
-                print(p)'''
+        pointsToAdd = self.findPointsAround(self.points[0])
+        while self.AnyFreePoints():
             if len(pointsToAdd) > 0:
+                print("added point")
                 self.edges[edgeNum].addPoints(pointsToAdd)
-                pointsToAdd = self.findPointsAroundList(pointsCopy, pointsToAdd)
+                pointsToAdd = self.findPointsAroundList(pointsToAdd)
             else:
+                print("new edge")
                 edgeNum += 1
-                self.edges.append(Edge(pointsCopy[0], edgeNum, self.origin))
-                pointsCopy.pop(0)
-                pointsToAdd = self.findPointsAround(pointsCopy, self.edges[edgeNum].getStartPoint())
-            '''for p in pointsToAdd:
-                print(p)'''
-        self.edges[edgeNum].addPoints(pointsToAdd)
-        '''for e in self.edges:
-            print('????????????????????????????????????????????????????')
-            print(e)'''
+                freePoint = self.findFreePoint()
+                self.edges.append(Edge(freePoint, edgeNum, self.origin))
+                pointsToAdd = self.findPointsAround(freePoint)
 
-    def findPointsAround(self, array, centerPoint):
+    def findPointsAround(self, centerPoint):
         result = []
-        for i in range(len(array) - 1, -1, -1):
-            if self.distancePP(centerPoint, array[i]) <= self.margin * 2.15 and (centerPoint.getX() != array[i].getX() or centerPoint.getY() != array[i].getY()):
-                result.append(array[i])
-                array.pop(i)
-        return result
+        for p in self.points:
+            if self.distancePP(centerPoint, p) <= self.margin * 2.15 and (centerPoint.getX() != p.getX() or centerPoint.getY() != p.getY()):
+                result.append(p)
 
-    def removeAllTakenPoints(self, arrayToButcher):
-        for i in range(len(arrayToButcher) - 1, -1, -1):
-            if arrayToButcher[i].getEdgeNum() != -1:
-                arrayToButcher.pop(i)
+        return result
 
     def findClosestPoint(self):
         minimum = self.distancePP(self.points[0], self.origin)
@@ -190,13 +171,11 @@ class pointCollection:
                 minimum = self.distancePP(self.points[0], self.origin)
         return closestPoint
 
-    def getEdgeEnds(self):
-        return self.edgeEnds
 
-    def findPointsAroundList(self, array, centerPoints):
+    def findPointsAroundList(self, centerPoints):
         result = []
         for p in centerPoints:
-            result.extend(self.findPointsAround(array, p))
+            result.extend(self.findPointsAround(p))
         return result
     """
     def extendEdge(self, extendingEdge, newPoints):
