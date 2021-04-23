@@ -98,7 +98,7 @@ def append_hex(a, b):
 
 def port_init():
 
-    UDP_IP = "192.168.1.77"      #LiDAR IP address. This should not change
+    UDP_IP = ''      #LiDAR IP address. This should not change
     UDP_PORT = 2368              #LiDAR Port address. This is defualt to the LiDAR itself
 
     print("UDP target IP: %s" % UDP_IP)

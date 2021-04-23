@@ -1,11 +1,12 @@
 from __future__ import print_function
 import time
+import math
 from dronekit import connect, VehicleMode, LocationGlobalRelative
 from pointCollection import pointCollection
 from Data_Converter import port_init, getLiDAR_data
 
 currentVelocity = ()  # form of: (x,y,z,xyAngle,zAngle)
-dimension = 5
+dimension = 15
 start = 0
 
 # Set up option parsing to get connection string
@@ -84,9 +85,9 @@ def send_ned_velocity(velocity_x, velocity_y, velocity_z, duration):
         0, 0, 0, # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
         0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink)
     # send command to vehicle on 1 Hz cycle
-    for x in range(0,duration):
-        vehicle.send_mavlink(msg)
-        time.sleep(1)
+    #for x in range(0,duration):
+    vehicle.send_mavlink(msg)
+    #sleep(1)
 
 def condition_yaw(heading, relative=False):
     if relative:
@@ -108,11 +109,9 @@ def condition_yaw(heading, relative=False):
 
 def begin():
     sock = port_init()
-    print("are we fucked")
     points = getLiDAR_data(sock)
-    print("we fucked")
     print(len(points))
-    converter = pointCollection.py(30, points)
+    converter = pointCollection(30, points)
     callMethods(sock, converter)
 
 
@@ -125,14 +124,16 @@ def callMethods(sock, converter):
     while INTERRUPT == 'FALSE':
         print("call obstacle avoidance algorithm")
         points = getLiDAR_data(sock)
-        # temp = startAvoidance(points)
-        # if temp is not None:
-        #     #send_ned_velocity(temp[0].x * -1, temp[0].y * -1, [0].z * -1, .5)
-        #     start = time.time() - .5  # ensures .5 second delay before pathing alters the drone path again
+        temp = startAvoidance(points)
+        send_ned_velocity(10, 1, 0,100000)
+        if len(temp) > 0:
+            send_ned_velocity(0, 0, 0, .5)
+            return
+            start = time.time() - .5  # ensures .5 second delay before pathing alters the drone path again
         time.sleep(0.1)
 
         # When 1 sec or more has elapsed...
-        if time.time() - start > 1:
+        if time.time() - start > 4:
             start = time.time()
             # This will be called once per second
             print("call pathing algorithm")
@@ -144,20 +145,19 @@ def callMethods(sock, converter):
                 if point.getVertical()==1:
                     points2.append(point)
 
-            with open('test.txt', 'wb') as file:
+            '''with open('test.txt', 'wb') as file:
                 pickle.dump(points2,file)
                 file.close()
             with open('test.txt', 'rb') as file:
                 temp = pickle.load(file)
                 file.close()
-                print(len(temp))
-
+                print(len(temp))'''
 
 
             testTime = (time.time())
             converter.setNewPoints(points2)
 
-            print(converter.findDirectionTo(0, 1000))
+            #print(converter.findDirectionTo(0, 1000))
             print(time.time()-testTime)
 
         #  pointCollection.findDirectionTo(dx,dy)
@@ -167,30 +167,44 @@ def callMethods(sock, converter):
 def startAvoidance(pointList):
     global currentVelocity
     currentVelocity = vehicle.velocity
-    specificSubset = avoidRectangular(currentVelocity.x, currentVelocity.y, currentVelocity.z, pointList)  # efficient method to shrink the list by limiting points to only those in range of velocity components
-    return avoidPolar(specificSubset)  # uses the smaller list, if not empty, to detect possible collision
+    specificSubset = avoidRectangular(1000*currentVelocity[0], 1000*currentVelocity[1], 1000*currentVelocity[2], pointList)  # efficient method to shrink the list by limiting points to only those in range of velocity components
+    return avoidPolar(specificSubset, currentVelocity[0], currentVelocity[1], currentVelocity[2])  # uses the smaller list, if not empty, to detect possible collision
 
 
 # inputs: x,y,z components of velocity and the list of points from the most recent lidar scan
 def avoidRectangular(x, y, z, pointList):
+    print("velocity", x, y, z)
     specificSubset = []
     for p in pointList:
-        if (0 < x < p.x) or (0 > x > p.x):
-            if (0 < y < p.y) or (0 > y > p.y):
-                if (0 < z < p.z) or (0 > z > p.z):
-                    specificSubset.append(p)
+        if (0 <= p.x <= x) or (0 >= p.x >= x):
+            if (0 <= p.y <= y) or (0 >= p.y >= y):
+                if (0 <= p.z <= z) or (0 >= p.z >= z):
+                    if not (p.x==0 and p.y==0 and p.z==0):
+                        specificSubset.append(p)
     return specificSubset
 
     # find all points with x in a range between 0m and the x component of velocity, eliminate all others. repeat with y and z
     # if the list of points is not empty, then check the angle of each point
 
 
-def avoidPolar(specificSubset):
+def avoidPolar(specificSubset, x, y, z):
     collisionPoints = []
+    print(len(specificSubset))
     for p in specificSubset:
+        print("GetX, GetY =", p.getX(),p.getY())
         # calculate if the angles collide. if they do, stop or reverse movement
-        if currentVelocity.xyAngle - dimension < p.azimuth < currentVelocity.xyAngle + dimension:
-            if currentVelocity.zAngle - dimension < p.azimuth < currentVelocity.zAngle + dimension:
+        print("heading =", vehicle.heading)
+        print("azimuth =", p.getAngle())
+        print("alpha =", p.alpha)
+        print("x =", x)
+        print("y=", y)
+        print("tan of x/y =", math.degrees(math.tan(x/y)))
+        print("atan of x/y =", math.degrees(math.atan(x/y)))
+        print("tan of y/x =", math.degrees(math.tan(y/x)))
+        print("atan of y/x =", math.degrees(math.atan(y/x)))
+        if vehicle.heading - dimension - 360 < p.getAzimuth() < vehicle.heading + dimension - 360:
+            print("Andrew wants me here")
+            if vehicle.heading - dimension < p.getVertical() < vehicle.heading + dimension:
                 # following line to be replaced with an output: 0 if no change, or intended change in velocity if
                 # collision is detected
                 collisionPoints.append(p)
@@ -199,10 +213,10 @@ def avoidPolar(specificSubset):
 
 
 arm_and_takeoff(10)
-
+print("heading", vehicle.heading)
 print("Set default/target airspeed to 3")
 vehicle.airspeed = 3
-
+send_ned_velocity(10,1,0,20)
 begin()
 
 # print("Going towards first point for 30 seconds ...")
